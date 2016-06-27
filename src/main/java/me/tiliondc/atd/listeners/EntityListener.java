@@ -144,7 +144,7 @@ public class EntityListener implements Listener {
     }
 
     public void loadAllEntities() {
-        String[][] rows = database.selectFromTable(tableName, null, null, null, null);
+        String[][] rows = database.selectFromTable(tableName, null, null, null);
         for(String[] row : rows) {
             Plugin plugin = Bukkit.getPluginManager().getPlugin(row[0]);
             Entity entity = getEntityByUniqueId(UUID.fromString(row[1]));

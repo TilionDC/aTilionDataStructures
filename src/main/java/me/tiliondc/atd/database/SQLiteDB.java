@@ -30,7 +30,7 @@ public class SQLiteDB {
     }
 
 
-    public boolean createTable(String tablename, int keys, int values) {
+    public synchronized boolean createTable(String tablename, int keys, int values) {
         if(keys < 1) keys = 1;
 
         String syntax = "CREATE TABLE IF NOT EXISTS " + tablename + " ( ";
@@ -56,7 +56,7 @@ public class SQLiteDB {
         }
     }
 
-    public boolean insertToTable(String tablename, String... data) {
+    public synchronized boolean insertToTable(String tablename, String... data) {
 
         int keys = getKeysCount(tablename);
         int columns = getColumnCount(tablename);
@@ -97,7 +97,7 @@ public class SQLiteDB {
         return false;
     }
 
-    public String[][] selectFromTable(String tablename, String... keysAndValues) {
+    public synchronized String[][] selectFromTable(String tablename, String... keysAndValues) {
 
         String syntax = "SELECT * FROM " + tablename;
         int keys = getKeysCount(tablename);
@@ -146,7 +146,7 @@ public class SQLiteDB {
         return results.toArray(new String[0][]);
     }
 
-    public int getColumnCount(String tablename) {
+    public synchronized int getColumnCount(String tablename) {
         String syntax = "SELECT * FROM (" + tablename + ");";
 
         int count = 0;
@@ -160,13 +160,14 @@ public class SQLiteDB {
         return count;
     }
 
-    public int getKeysCount(String tablename) {
+    public synchronized int getKeysCount(String tablename) {
         String syntax = "SELECT * FROM (" + tablename + ");";
 
         int count = 1;
         try {
             ResultSet rs = stmt.executeQuery(syntax);
             ResultSetMetaData rsmd = rs.getMetaData();
+            if(rsmd.getColumnCount() < 2) return 0;
             for(int i = 1; i <= rsmd.getColumnCount(); i++) {
                 if(!rsmd.getColumnName(i).equals("key" + (i - 1))) break;
                 count = i;

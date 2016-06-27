@@ -149,7 +149,7 @@ public class PlayerListener implements Listener {
     }
 
     public void loadAllPlayers() {
-        String[][] rows = database.selectFromTable(tableName, null, null, null, null);
+        String[][] rows = database.selectFromTable(tableName, null, null, null);
         for(String[] row : rows) {
             Plugin plugin = Bukkit.getPluginManager().getPlugin(row[0]);
             Player player = Bukkit.getServer().getPlayer(row[1]);

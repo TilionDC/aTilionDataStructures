@@ -4,6 +4,7 @@ import me.tiliondc.atd.database.SQLiteDB;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -30,8 +31,7 @@ public class BlockListener implements Listener {
     Collection<String> prefixes;
     Collection<String> specifics;
     boolean casesensitive;
-    Map<World, Class> craftworlds;
-    MetadataStoreBase storeBase;
+    MetadataStoreBase<Block> storeBase;
     Map<World, Map<String, Map<Plugin, MetadataValue>>> metadataMaps;
 
     public static final String tableName = "BLOCK_4_1";
@@ -45,16 +45,17 @@ public class BlockListener implements Listener {
         this.specifics = specifics;
         this.casesensitive = casesensitive;
 
-        //plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        metadataMaps = new HashMap<>();
+
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
         database.createTable(tableName, 4, 1);
         for(World world : Bukkit.getServer().getWorlds()) {
-            craftworlds.put(world, world.getClass());
             try {
                 Field fieldStoreBase;
-                fieldStoreBase = craftworlds.get(world).getDeclaredField("blockMetadata");
+                fieldStoreBase = world.getClass().getDeclaredField("blockMetadata");
                 fieldStoreBase.setAccessible(true);
-                storeBase = ((MetadataStoreBase) fieldStoreBase.get(Bukkit.getServer()));
+                storeBase = ((MetadataStoreBase<Block>) fieldStoreBase.get(world));
                 Field f = MetadataStoreBase.class.getDeclaredField("metadataMap");
                 f.setAccessible(true);
                 metadataMaps.put(world, (HashMap<String, Map<Plugin, MetadataValue>>) f.get(storeBase));
@@ -64,12 +65,13 @@ public class BlockListener implements Listener {
             }
         }
 
-        //addAutoTimer(savetimeinticks);
+        addAutoTimer(savetimeinticks);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onChunkLoad(ChunkLoadEvent e) {
         World world = e.getWorld();
+        if(metadataMaps.get(world) == null) return;
         for(String s : metadataMaps.get(world).keySet()) {
             long x = Long.parseLong(s.split(":")[0]);
             long y = Long.parseLong(s.split(":")[1]);
@@ -101,6 +103,20 @@ public class BlockListener implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
+                    for(World world : Bukkit.getServer().getWorlds()) {
+                        try {
+                            Field fieldStoreBase;
+                            fieldStoreBase = world.getClass().getDeclaredField("blockMetadata");
+                            fieldStoreBase.setAccessible(true);
+                            storeBase = ((MetadataStoreBase<Block>) fieldStoreBase.get(world));
+                            Field f = MetadataStoreBase.class.getDeclaredField("metadataMap");
+                            f.setAccessible(true);
+                            metadataMaps.put(world, (HashMap<String, Map<Plugin, MetadataValue>>) f.get(storeBase));
+
+                        } catch (NoSuchFieldException | IllegalAccessException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     saveAllBlocks();
                     loadAllBlocks();
                 }
@@ -109,7 +125,9 @@ public class BlockListener implements Listener {
     }
 
     public void saveAllBlocks() {
+        if(metadataMaps == null) return;
         for(World world : Bukkit.getServer().getWorlds()) {
+            if(metadataMaps.get(world) == null) continue;
             for (String key : metadataMaps.get(world).keySet()) {
                 String cords = key.split(":")[0] + ":" + key.split(":")[1] + ":" + key.split(":")[2];
                 String ki = key.split(":")[3];
@@ -122,6 +140,7 @@ public class BlockListener implements Listener {
     }
 
     public void saveSpecificBlock(String worldid, String blocklocation) {
+        if(metadataMaps == null) return;
         World world = Bukkit.getServer().getWorld(UUID.fromString(worldid));
             for (String key : metadataMaps.get(world).keySet()) {
                 String cords = key.split(":")[0] + ":" + key.split(":")[1] + ":" + key.split(":")[2];
